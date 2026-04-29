@@ -3,6 +3,7 @@ package com.operalatam.api.controller;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,14 +20,17 @@ import com.operalatam.api.dto.AeronaveResultDTO;
 import com.operalatam.api.dto.InputCreateSetorDTO;
 import com.operalatam.api.dto.ListAeronavesRequestDTO;
 import com.operalatam.api.model.Aeronave;
-import com.operalatam.api.repository.AeronaveRepository;
+import com.operalatam.api.service.AeronaveService;
 
 
 @RestController
 @RequestMapping("/aeronaves")
 public class AeronaveController {
 
-    public AeronaveController(AeronaveRepository aeronaveRepository) {
+    private final AeronaveService aeronaveService;
+
+    public AeronaveController(AeronaveService aeronaveService) {
+        this.aeronaveService = aeronaveService;
     }
 
     @PostMapping
@@ -37,16 +41,13 @@ public class AeronaveController {
                     .body(new AeronaveResultDTO(false, "Nome deve ser informado"));
         }
 
-        // check duplicate
-        if (aeronave.existsByNome(nome)) {
+        if (aeronaveService.existsByNome(nome)) {
             return ResponseEntity.status(409)
-                    .body(new AeronaveResultDTO(false, "Aeronave com esse nome já existe"));
+                    .body(new AeronaveResultDTO(false, "Prefixo já existente"));
         }
 
-        Aeronave aeronave = new Aeronave();
-        aeronave.setAeronave(nome);
         try {
-            aeronave.createAeronaveEntity(aeronave);
+            aeronaveService.createAeronave(nome);
             return ResponseEntity.ok(new AeronaveResultDTO(true, "Aeronave criada com sucesso"));
         } catch (Exception ex) {
             return ResponseEntity.status(500)
@@ -55,7 +56,7 @@ public class AeronaveController {
     }
 
     @GetMapping(path = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
-    public org.springframework.http.ResponseEntity<?> listSetores(@ModelAttribute ListAeronavesRequestDTO req) {
+    public ResponseEntity<?> listSetores(@ModelAttribute ListAeronavesRequestDTO req) {
         Integer page = req.getPage();
         Integer size = req.getSize();
         String nome = req.getNome();
@@ -66,19 +67,25 @@ public class AeronaveController {
             List<AeronaveResponseDTO> dto = all.stream()
                     .map(s -> new AeronaveResponseDTO(s.getId(), s.getNome()))
                     .collect(Collectors.toList());
-            return org.springframework.http.ResponseEntity.ok(dto);
+            return ResponseEntity.ok(dto);
         }
 
         int p = page == null ? 0 : page;
         int s = size == null ? 10 : size;
-        Page<Aeronave> pg = aeronave.listAeronaves(nome, p, s);
+        Page<Aeronave> pg = aeronaveService.listAeronaves(nome, p, s);
         Page<AeronaveResponseDTO> dtoPage = pg.map(sx -> new AeronaveResponseDTO(sx.getId(), sx.getNome()));
-        return org.springframework.http.ResponseEntity.ok(dtoPage);
+        return ResponseEntity.ok(dtoPage);
     }
 
     @DeleteMapping("/{id}")
-    public void deleteAeronave(@PathVariable Long id) {
-        aeronave.deleteaeronave(id);
+    public ResponseEntity<?> deleteAeronave(@PathVariable Long id) {
+        try {
+            aeronaveService.deleteAeronave(id);
+            return ResponseEntity.ok(new AeronaveResultDTO(true, "Aeronave deletada com sucesso"));
+        } catch (Exception ex) {
+            return ResponseEntity.status(500)
+                    .body(new AeronaveResultDTO(false, "Erro ao deletar aeronave: " + ex.getMessage()));
+        }
     }
 }
 

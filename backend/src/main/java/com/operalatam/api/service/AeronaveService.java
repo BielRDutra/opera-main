@@ -2,7 +2,7 @@ package com.operalatam.api.service;
 
 import java.util.List;
 
-import org.hibernate.query.Page;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,7 +24,7 @@ public class AeronaveService {
         if (nomeFilter == null || nomeFilter.isBlank()) {
             return aeronaveRepository.findAll(pageable);
         }
-        return aeronaveRepository.findByNomeContainingIgnoreCase(nomeFilter, (org.springframework.boot.data.autoconfigure.web.DataWebProperties.Pageable) pageable);
+        return aeronaveRepository.findByNomeContainingIgnoreCase(nomeFilter, pageable);
     }
 
     public String getAeronave(String nome) {
@@ -58,7 +58,6 @@ public class AeronaveService {
         if (nomeFilter == null || nomeFilter.isBlank()) {
             return aeronaveRepository.findAll();
         }
-        // reuse repository method with large pageable to get all matching
         return aeronaveRepository.findByNomeContainingIgnoreCase(nomeFilter, PageRequest.of(0, Integer.MAX_VALUE)).getContent();
     }
 
